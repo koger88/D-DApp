@@ -8,9 +8,9 @@ from kivy.uix.scrollview import ScrollView
 from kivy.core.window import Window
 import requests
 import webbrowser
-
 Scene = ""
 
+# Appens startside skrevet i kivy's kv format
 Builder.load_string("""
 <MenuScreen>:
     FloatLayout:
@@ -46,23 +46,25 @@ Builder.load_string("""
 
 """)
 
+# Klassen MenuScreen nedarver fra Kivy's Screen og er vores app's startside 
 class MenuScreen(Screen):
+    #Metode som skifter side fra startsiden til en af de 4 muligheder.
     def ButtonPress(self, instance):
         global Scene
         Scene = instance.text
         self.manager.current = 'item'
 
-
+    #Metode der åbner API'ens Copyright
     def Copyright(self):
         webbrowser.open("https://www.dnd5eapi.co/")
 
+# Klassen ItemScreen nedarver fra Kivy's Screen og er siden efter vores startside
 class ItemScreen(Screen):
-
-    #Funktion til tilbageknap
+    #Metode til tilbageknap
     def BackButtonPress(self,instance):
         self.manager.current = 'menu'
     
-    #Funktion til at vælge en specifik ting
+    #Metode til at vælge en specifik ting
     def ChangeButtonPress(self,instance):
         global Scene
         for item in self.items["results"]:
@@ -71,6 +73,7 @@ class ItemScreen(Screen):
 
         self.manager.current = 'specificItem'
 
+    #Indbygget metode i Kivy, som kører når en Screen bliver kaldt
     def on_pre_enter(self, *args):
         self.clear_widgets()
         global Scene
@@ -80,37 +83,37 @@ class ItemScreen(Screen):
         g = GridLayout(cols=1, spacing=10, size_hint_y=None)
         g.bind(minimum_height=g.setter('height'))
      
-        #Definere tilbage knap
+        #Definere tilbage-knappen
         btn = Button(text="Tilbage til start", size_hint_y=None, height=40)
         btn.bind(on_press=self.BackButtonPress)
         g.add_widget(btn)
 
-        #Tilføjer alle resultater fra api'en som en knap i vores definerede gridlayout
+        #Tilføjer alle resultater fra api'en som en knap i vores gridlayout
         for item in self.items["results"]:
-            print(str(item)+"\n")
             btn = Button(text=str(item["index"]), size_hint_y=None, height=40)
             btn.bind(on_press=self.ChangeButtonPress)
             g.add_widget(btn)
 
+        #Opretter en instans af ScrollView, så man kan scroll i listen 
         root = ScrollView()
         root.add_widget(g)
         self.add_widget(root)
 
+# Klassen SpecificItemScreen er beregnet til at strukturer data fra en specific ting.
 class SpecificItemScreen(Screen):
-
-    #Funktion til tilbageknap
+    #Metode til tilbageknap
     def BackButtonPress(self,instance):
         self.manager.current = 'menu'
 
+    #Metode som kører når SpecificItemScreen bliver vist af ScreenManager sm
     def on_pre_enter(self, *args):
         self.clear_widgets()
         global Scene
         items = requests.get(f"https://dnd5eapi.co{Scene}").json()
         
-        #definere et gridlayout til api resultater 
+        #Definere et gridlayout til api resultater 
         g = GridLayout(cols=1, spacing=10, size_hint_y=None)
         g.bind(minimum_height=g.setter('height'))
-
         root = ScrollView()
 
         #Definere tilbage knap
@@ -120,8 +123,10 @@ class SpecificItemScreen(Screen):
  
         g.add_widget(Label(text=str(items["name"]), size_hint_y=None, height=80))
 
-        i = Scene.split("/")[2]
+        #Checker om den valgte ting er en race, class, skill eller feature.
+        i = Scene.split("/")[2]    
         if i == "races":
+            #Tilføjer Labels med relevant data for en given race
             g.add_widget(Label(text="Speed : " + str(items["speed"]), size_hint_y=None,text_size= [Window.width-80,None],height=-0.1468*Window.width+197.43))
             
             n = "Ability Bonuses : \n"
@@ -135,7 +140,7 @@ class SpecificItemScreen(Screen):
             g.add_widget(Label(text="Size Description : "+str(items["size_description"]), size_hint_y=None,text_size= [Window.width-80,None],height=-0.1468*Window.width+197.43))
         
         elif i == "classes":
-
+            #Tilføjer Labels med relevant data for en given class
             n = "Proficiency Choices : \n"
             n = n +"   Choose : " + str(items["proficiency_choices"][0]["choose"]) + "\n       "
             for item in items["proficiency_choices"][0]["from"]:
@@ -153,6 +158,7 @@ class SpecificItemScreen(Screen):
             g.add_widget(Label(text=n, size_hint_y=None,text_size= [Window.width-80,None],height=-0.1468*Window.width+197.43))
         
         elif i == "skills":
+            #Tilføjer Labels med relevant data for en given skill
             n = "Description : \n"
             for item in items["desc"]:
                 n = n + str(item)+", "
@@ -162,6 +168,7 @@ class SpecificItemScreen(Screen):
             g.add_widget(Label(text=n, size_hint_y=None,text_size= [Window.width-80,None],height=-0.1468*Window.width+197.43))
 
         elif i == "features":
+            #Tilføjer Labels med relevant data for en given feature
             g.add_widget(Label(text="Level : " + str(items["level"]), size_hint_y=None,text_size= [Window.width-80,None],height=-0.1468*Window.width+197.43))
 
             n = "Description : \n"
@@ -172,14 +179,16 @@ class SpecificItemScreen(Screen):
         root.add_widget(g)
         self.add_widget(root)
 
-sm = ScreenManager()
-sm.add_widget(MenuScreen(name='menu'))
-sm.add_widget(ItemScreen(name='item'))
-sm.add_widget(SpecificItemScreen(name='specificItem'))
-
+#Klasse, som nedarver fra Kivy's App klasse
 class DnDApp(App):
     def build(self):
-        return sm
+        #Sætter self.sm til en instans af ScreenManager, så vi kan skifte mellem sider
+        self.sm = ScreenManager()
+        self.sm.add_widget(MenuScreen(name='menu'))
+        self.sm.add_widget(ItemScreen(name='item'))
+        self.sm.add_widget(SpecificItemScreen(name='specificItem'))
+
+        return self.sm
 
 
 if __name__ =='__main__':
